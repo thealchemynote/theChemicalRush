@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chemical Rush v2</title>
+<style>
+:root{
+  --bg:#071014;--panel:#101b24;--line:#2d4b60;--cyan:#78f6ff;--green:#5cffaa;
+  --red:#ff5368;--yellow:#ffe66d;--text:#f4fdff;--muted:#91aeba;--purple:#c69cff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;background:
+  radial-gradient(circle at 18% 8%,rgba(120,246,255,.16),transparent 28%),
+  radial-gradient(circle at 86% 12%,rgba(255,230,109,.1),transparent 26%),
+  linear-gradient(180deg,#08141a,#020506);
+  color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+.app{width:min(1280px,100%);margin:auto;padding:14px;display:grid;gap:12px}
+.panel,header{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border:1px solid rgba(120,246,255,.22);border-radius:18px;box-shadow:0 14px 50px rgba(0,0,0,.28)}
+header{padding:16px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+h1{margin:0;font-size:clamp(30px,5vw,64px);letter-spacing:.12em;color:#eaffff;text-shadow:0 0 18px rgba(120,246,255,.72)}
+.sub{color:var(--muted);letter-spacing:.12em;font-size:12px;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;min-width:min(650px,56vw)}
+.stat{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:9px}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:18px}
+main{display:grid;grid-template-columns:1fr 360px;gap:12px}
+.duel{display:grid;gap:10px}
+.lab{padding:12px}.labHead{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}.labTitle{font-size:18px;font-weight:900}.life{color:var(--yellow);font-weight:900}.score{color:var(--cyan);font-weight:900}
+.field{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;min-height:116px}
+.hand{display:flex;gap:8px;flex-wrap:wrap;min-height:112px}
+.card{
+  min-height:96px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(135deg,rgba(120,246,255,.09),rgba(255,255,255,.025));
+  padding:9px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;position:relative;transition:.1s
+}
+.card:hover,.selected{outline:2px solid var(--yellow);transform:translateY(-2px)}
+.card.selected::after{content:"SELECT";position:absolute;top:5px;right:6px;font-size:10px;color:#071014;background:var(--yellow);padding:2px 5px;border-radius:999px;font-weight:900}
+.hand .card{width:92px}.empty{opacity:.28;cursor:default}.empty:hover{outline:none;transform:none}
+.name{font-weight:900}.formula{color:var(--cyan);font-size:12px}.pts{color:var(--yellow);font-size:12px}.kind{color:var(--muted);font-size:11px}
+.stack{color:var(--purple)}
+.side{padding:14px;display:flex;flex-direction:column;gap:10px}
+button,select{border:none;border-radius:13px;padding:11px;font-weight:900;font-size:14px;cursor:pointer}
+button{background:linear-gradient(180deg,#dfffff,#56ddea);color:#031014;box-shadow:0 7px 0 rgba(0,0,0,.25)}
+button:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+button:disabled{opacity:.42;filter:grayscale(1);cursor:not-allowed}
+.good{background:linear-gradient(180deg,#7dffbf,#19a96c)}.danger{background:linear-gradient(180deg,#ff7a8a,#b61d35);color:white}.warn{background:linear-gradient(180deg,#fff082,#c69216)}.purple{background:linear-gradient(180deg,#e0c7ff,#8b5dda);color:white}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.message,.rule{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:11px;color:#dffaff;font-size:13px;line-height:1.5}
+.log{height:230px;overflow:auto;background:rgba(0,0,0,.24);border-radius:14px;padding:9px;color:var(--muted);font-size:12px;line-height:1.45}.log div{padding:6px;border-bottom:1px solid rgba(255,255,255,.05)}
+.modal{position:fixed;inset:0;background:radial-gradient(circle,rgba(120,246,255,.18),rgba(0,0,0,.92) 58%);display:flex;align-items:center;justify-content:center;padding:18px;z-index:10}
+.box{width:min(900px,100%);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#11222c,#05090c);border:1px solid rgba(120,246,255,.35);border-radius:26px;padding:26px;text-align:center;box-shadow:0 30px 100px rgba(0,0,0,.65)}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.choice{text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;margin:8px 0}
+.flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:8}.flash.show{animation:flash .4s}.flash.red{background:rgba(255,83,104,.32)}.flash.cyan{background:rgba(120,246,255,.28)}.flash.yellow{background:rgba(255,230,109,.3)}
+@keyframes flash{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+.bigFx{position:fixed;left:50%;top:43%;transform:translate(-50%,-50%) scale(.8);z-index:9;pointer-events:none;opacity:0;font-size:clamp(34px,8vw,92px);font-weight:1000;letter-spacing:.08em;color:#fff;text-shadow:0 0 18px #fff,0 0 56px rgba(120,246,255,.9);white-space:nowrap}
+.bigFx.show{animation:bigFx .9s ease-out}
+@keyframes bigFx{0%{opacity:0;transform:translate(-50%,-50%) scale(.65)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-58%) scale(1)}}
+body.shake{animation:shake .35s linear}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-8px,3px)}40%{transform:translate(7px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(5px,4px)}}
+@media(max-width:930px){header{display:block}.stats{min-width:0;width:100%;grid-template-columns:repeat(2,1fr);margin-top:10px}main{grid-template-columns:1fr}.field{grid-template-columns:repeat(2,1fr)}.rules{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="flash" id="flash"></div><div class="bigFx" id="bigFx">REACTION!</div>
+
+<div class="modal" id="startModal"><div class="box">
+<h1>CHEMICAL RUSH</h1>
+<p>v2：カード定義・反応定義・効果処理を整理して再構築した安定版</p>
+<div class="rules">
+<div class="rule"><b>初期手札7枚</b><br>毎ターン1枚ドロー</div>
+<div class="rule"><b>1ターン1行動</b><br>作る・送る・使う</div>
+<div class="rule"><b>場の点数勝負</b><br>ライフ0なら敗北</div>
+</div>
+<p>ターン数 <select id="turnSelect"><option>10</option><option>20</option><option>30</option></select></p>
+<button onclick="startGame()">ゲーム開始</button>
+</div></div>
+
+<div class="modal" id="resultModal" style="display:none"><div class="box">
+<h1>RESULT</h1><h2 id="resultTitle"></h2><p id="resultText"></p><button onclick="backTitle()">タイトルへ</button>
+</div></div>
+
+<div class="modal" id="choiceModal" style="display:none"><div class="box">
+<h2 id="choiceTitle">選択</h2><div id="choiceBody"></div><button onclick="closeChoice()">閉じる</button>
+</div></div>
+
+<div class="app">
+<header>
+<div><h1>CHEMICAL RUSH</h1><div class="sub">Card Battle v2</div></div>
+<div class="stats">
+<div class="stat"><small>TURN</small><b id="turn">0/10</b></div>
+<div class="stat"><small>PHASE</small><b id="phase">待機</b></div>
+<div class="stat"><small>ACTION</small><b id="action">未使用</b></div>
+<div class="stat"><small>DECK</small><b id="deckCount">0</b></div>
+</div>
+</header>
+
+<main>
+<section class="duel">
+<div class="panel lab">
+<div class="labHead"><div class="labTitle">CPU研究室</div><div><span class="life" id="cLife">♥♥♥</span> <span class="score" id="cScore">0点</span></div></div>
+<div class="field" id="cpuField"></div>
+</div>
+<div class="panel lab">
+<div class="labHead"><div class="labTitle">あなたの研究室</div><div><span class="life" id="pLife">♥♥♥</span> <span class="score" id="pScore">0点</span></div></div>
+<div class="field" id="playerField"></div>
+</div>
+<div class="panel lab">
+<div class="labHead"><div class="labTitle">手札</div><div id="handInfo"></div></div>
+<div class="hand" id="hand"></div>
+</div>
+</section>
+
+<aside class="panel side">
+<div class="message" id="message">ゲーム開始後、まずドロー。カードをタップして選択します。</div>
+<div class="grid2">
+<button class="good" id="drawBtn" onclick="playerDraw()">ドロー</button>
+<button class="warn" id="makeBtn" onclick="makeOwn()">物質を作る</button>
+<button id="playBtn" onclick="playSelectedAtom()">単体を出す</button>
+<button class="danger" id="sendBtn" onclick="sendReaction()">物質を送る</button>
+<button class="good" id="ironBtn" onclick="useIron()">鉄を使う</button>
+<button class="good" id="limeBtn" onclick="useLimewater()">石灰水</button>
+<button class="purple" id="reductionBtn" onclick="useReduction()">還元</button>
+<button class="purple" id="convertBtn" onclick="convertStack()">変換</button>
+<button class="danger" id="fireBtn" onclick="openFire()">火を使う</button>
+<button id="elecBtn" onclick="openElectric()">電気を使う</button>
+<button onclick="clearSelection()">選択解除</button>
+</div>
+<button id="endBtn" onclick="endPlayerTurn()">ターン終了</button>
+<div class="rule"><b>作る</b><br>手札＋自分の場の素材を選択。候補から物質生成。余った原子は捨て札。</div>
+<div class="rule"><b>送る</b><br>相手の場＋自分の素材を選ぶと、相手の場で反応生成。中和なら受けた側ライフ-1。</div>
+<div class="log" id="log"></div>
+</aside>
+</main>
+</div>
+
+<script>
+window.onerror=function(msg,src,line,col,err){
+ try{log("ERROR: "+msg+" line:"+line)}catch(e){alert("ERROR: "+msg)}
+};
+
+const BASE_DECK=["水素","水素","水素","水素","酸素","酸素","酸素","酸素","炭素","炭素","炭素","窒素","窒素","硫黄","硫黄","硫黄","塩素","塩素","鉄","マグネシウム","マグネシウム","ナトリウム","ナトリウム","石灰水","石灰水","電気","電気","火","火"];
+
+const defs={
+ "水素":{formula:"H",score:0,type:"atom",atoms:{H:1}},
+ "酸素":{formula:"O",score:0,type:"atom",atoms:{O:1}},
+ "窒素":{formula:"N",score:0,type:"atom",atoms:{N:1}},
+ "塩素":{formula:"Cl",score:0,type:"atom",atoms:{Cl:1}},
+ "炭素":{formula:"C",score:5,type:"atom",atoms:{C:1},stack:"C"},
+ "硫黄":{formula:"S",score:5,type:"atom",atoms:{S:1},stack:"S"},
+ "鉄":{formula:"Fe",score:60,type:"atom",atoms:{Fe:1}},
+ "ナトリウム":{formula:"Na",score:5,type:"atom",atoms:{Na:1}},
+ "マグネシウム":{formula:"Mg",score:5,type:"atom",atoms:{Mg:1}},
+ "火":{formula:"🔥",score:0,type:"event",atoms:{}},
+ "電気":{formula:"⚡",score:0,type:"event",atoms:{}},
+ "石灰水":{formula:"Ca(OH)₂",score:0,type:"event",atoms:{}},
+
+ "Cスタック":{formula:"C",score:5,type:"stack",atoms:{C:1},stack:"C"},
+ "Sスタック":{formula:"S",score:5,type:"stack",atoms:{S:1},stack:"S"},
+
+ "水素分子":{formula:"H₂",score:5,type:"compound",atoms:{H:2}},
+ "酸素分子":{formula:"O₂",score:5,type:"compound",atoms:{O:2}},
+ "窒素分子":{formula:"N₂",score:5,type:"compound",atoms:{N:2}},
+ "塩素分子":{formula:"Cl₂",score:5,type:"compound",atoms:{Cl:2}},
+ "水":{formula:"H₂O",score:20,type:"compound",atoms:{H:2,O:1}},
+ "二酸化炭素":{formula:"CO₂",score:40,type:"compound",atoms:{C:1,O:2}},
+ "炭酸":{formula:"H₂CO₃",score:50,type:"compound",atoms:{H:2,C:1,O:3}},
+ "塩酸":{formula:"HCl",score:40,type:"acid",atoms:{H:1,Cl:1}},
+ "硫酸":{formula:"H₂SO₄",score:60,type:"acid",atoms:{H:2,S:1,O:4}},
+ "水酸化ナトリウム":{formula:"NaOH",score:40,type:"base",atoms:{Na:1,O:1,H:1}},
+ "アンモニア":{formula:"NH₃",score:40,type:"compound",atoms:{N:1,H:3}},
+ "塩化ナトリウム":{formula:"NaCl",score:30,type:"compound",atoms:{Na:1,Cl:1}},
+ "塩化マグネシウム":{formula:"MgCl₂",score:30,type:"compound",atoms:{Mg:1,Cl:2}},
+ "炭酸水素ナトリウム":{formula:"NaHCO₃",score:100,type:"compound",atoms:{Na:1,H:1,C:1,O:3}},
+ "炭酸ナトリウム":{formula:"Na₂CO₃",score:70,type:"compound",atoms:{Na:2,C:1,O:3}},
+ "酸化鉄(II)":{formula:"FeO",score:30,type:"compound",atoms:{Fe:1,O:1}},
+ "酸化鉄(II,III)":{formula:"Fe₃O₄",score:50,type:"compound",atoms:{Fe:3,O:4}},
+ "酸化鉄(III)":{formula:"Fe₂O₃",score:30,type:"compound",atoms:{Fe:2,O:3}},
+ "硫化鉄":{formula:"FeS",score:15,type:"compound",atoms:{Fe:1,S:1}},
+ "硫化水素":{formula:"H₂S",score:30,type:"toxic",atoms:{H:2,S:1}},
+ "酸化マグネシウム":{formula:"MgO",score:30,type:"compound",atoms:{Mg:1,O:1}},
+ "ダイヤモンド":{formula:"C₈",score:50,type:"compound",atoms:{C:8}},
+ "硫黄ゴム":{formula:"S₈",score:0,type:"counter",atoms:{S:8}},
+ "エタノール":{formula:"C₂H₆O",score:30,type:"compound",atoms:{C:2,H:6,O:1}}
+};
+
+const recipeNames=[
+ "炭酸水素ナトリウム","炭酸ナトリウム","硫酸","酸化鉄(II,III)","炭酸",
+ "ダイヤモンド","硫黄ゴム","エタノール","塩酸","水酸化ナトリウム","アンモニア",
+ "二酸化炭素","酸化鉄(III)","塩化マグネシウム","塩化ナトリウム","酸化マグネシウム",
+ "硫化鉄","硫化水素","水","酸化鉄(II)","水素分子","酸素分子","窒素分子","塩素分子"
+];
+
+let maxTurns=10,turn=1,phase="player",hasDrawn=false,actionUsed=false;
+let selectedHand=new Set(), selectedPlayerField=new Set(), selectedCpuField=new Set();
+let player,cpu,audioCtx=null;
+
+function lab(){return{life:3,deck:shuffle([...BASE_DECK,...BASE_DECK]),hand:[],field:[],skipDraw:false}}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function draw(l,n=1){for(let i=0;i<n;i++){if(!l.deck.length)l.deck=shuffle([...BASE_DECK]);l.hand.push(l.deck.pop())}}
+function displayName(name){if(name==="Cスタック"){const n=this?.count||1;return n+"C"}return name}
+function cardScore(c){if(!c)return 0;const d=defs[c.name];if(!d)return 0;if(d.type==="stack")return (c.count||1)*5;return d.score||0}
+function score(l){return l.field.reduce((s,c)=>s+cardScore(c),0)}
+function hearts(n){return"♥".repeat(Math.max(0,n))+"♡".repeat(Math.max(0,3-n))}
+function log(t){const el=document.getElementById("log");if(!el)return;const d=document.createElement("div");d.textContent=t;el.prepend(d)}
+function flash(c){const f=document.getElementById("flash");f.className="flash "+c+" show";setTimeout(()=>f.className="flash",420)}
+function sound(kind="tap"){try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const now=audioCtx.currentTime,map={draw:[440],tap:[520],reaction:[523,659,784,1046],rare:[659,784,988,1318,1568],boom:[140,90,60],win:[523,659,784,1046,1318],lose:[220,165,110],skip:[784,659,784]};(map[kind]||map.tap).forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=(kind==="boom"||kind==="lose")?"sawtooth":"square";o.frequency.setValueAtTime(f,now+i*.08);g.gain.setValueAtTime(.0001,now+i*.08);g.gain.exponentialRampToValueAtTime(kind==="boom"?.14:.08,now+i*.08+.02);g.gain.exponentialRampToValueAtTime(.0001,now+i*.08+.075);o.connect(g).connect(audioCtx.destination);o.start(now+i*.08);o.stop(now+i*.08+.09)})}catch(e){}}
+function big(text,color="cyan",shake=false){const b=document.getElementById("bigFx");b.textContent=text;b.className="bigFx show";flash(color);if(shake){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360)}setTimeout(()=>b.className="bigFx",920)}
+
+function startGame(){maxTurns=+document.getElementById("turnSelect").value;player=lab();cpu=lab();draw(player,7);draw(cpu,7);turn=1;phase="player";hasDrawn=false;actionUsed=false;clearSelection(false);document.getElementById("log").innerHTML="";document.getElementById("startModal").style.display="none";log("ゲーム開始。まず山札からドロー。");sound("reaction");big("START","cyan");render()}
+function backTitle(){document.getElementById("resultModal").style.display="none";document.getElementById("startModal").style.display="flex"}
+function closeChoice(){document.getElementById("choiceModal").style.display="none"}
+function clearSelection(r=true){selectedHand=new Set();selectedPlayerField=new Set();selectedCpuField=new Set();if(r){document.getElementById("message").textContent="選択を解除しました。";render()}}
+function requireAction(){if(phase!=="player")return false;if(!hasDrawn){log("先にドローしてください。");return false}if(actionUsed){log("このターンの行動は使用済み。");return false}return true}
+function playerDraw(){if(phase!=="player"||hasDrawn)return;draw(player,1);hasDrawn=true;log("あなたは1枚ドロー。");sound("draw");big("DRAW","cyan");render()}
+
+function toggleHand(i){selectedCpuField.clear(); if(selectedHand.has(i))selectedHand.delete(i); else selectedHand.add(i); updateSelectedMessage(); render()}
+function toggleField(who,i){if(who==="player"){selectedCpuField.clear(); if(selectedPlayerField.has(i))selectedPlayerField.delete(i); else selectedPlayerField.add(i)}else{if(selectedCpuField.has(i))selectedCpuField.delete(i); else selectedCpuField.add(i)} updateSelectedMessage(); render()}
+function updateSelectedMessage(){const names=[...selectedHand].map(i=>player.hand[i]).concat([...selectedPlayerField].map(i=>label(player.field[i])),[...selectedCpuField].map(i=>"相手:"+label(cpu.field[i])));document.getElementById("message").textContent=names.length?("選択中： "+names.join(" / ")):"未選択"}
+
+function makeCard(name,count=1){return {name,count}}
+function label(c){if(!c)return "";if(c.name==="Cスタック")return (c.count||1)+"C";if(c.name==="Sスタック")return (c.count||1)+"S";return c.name}
+function formula(c){if(!c)return "";if(c.name==="Cスタック")return (c.count||1)+"C";if(c.name==="Sスタック")return (c.count||1)+"S";return defs[c.name]?.formula||""}
+function addBag(bag,atoms,mul=1){for(const[k,v]of Object.entries(atoms||{}))bag[k]=(bag[k]||0)+v*mul}
+function hasNeed(bag,need){return Object.entries(need).every(([k,v])=>(bag[k]||0)>=v)}
+function selectedOwnItems(){return [...selectedHand].map(i=>({zone:"hand",i,name:player.hand[i],card:null})).concat([...selectedPlayerField].map(i=>({zone:"pfield",i,name:player.field[i].name,card:player.field[i]})))}
+function selectedAllForSend(){return selectedOwnItems().concat([...selectedCpuField].map(i=>({zone:"cfield",i,name:cpu.field[i].name,card:cpu.field[i]})))}
+function bagOf(items){const bag={};for(const it of items){const d=defs[it.name];addBag(bag,d?.atoms||{},it.card?.count||1)}return bag}
+function candidateNames(bag){return recipeNames.filter(n=>hasNeed(bag,defs[n].atoms)).sort((a,b)=>defs[b].score-defs[a].score)}
+function removeItems(items){
+ [...items].filter(x=>x.zone==="hand").map(x=>x.i).sort((a,b)=>b-a).forEach(i=>player.hand.splice(i,1));
+ [...items].filter(x=>x.zone==="pfield").map(x=>x.i).sort((a,b)=>b-a).forEach(i=>player.field.splice(i,1));
+ [...items].filter(x=>x.zone==="cfield").map(x=>x.i).sort((a,b)=>b-a).forEach(i=>cpu.field.splice(i,1));
+}
+
+function makeOwn(){if(!requireAction())return;const items=selectedOwnItems();if(!items.length){log("素材を選択してください。");return}if(items.some(it=>defs[it.name].type==="event")){log("火・電気・石灰水は素材にできません。");return}const bag=bagOf(items),cands=candidateNames(bag);if(!cands.length){log("その組み合わせでは物質を作れません。");return}showCandidates("生成する物質を選択",cands,(name)=>{removeItems(items);addField(player,name,"あなた");log("あなたは"+name+"を作った。余った原子は捨て札へ。");sound(["炭酸水素ナトリウム","ダイヤモンド","硫黄ゴム","硫酸","エタノール"].includes(name)?"rare":"reaction");big("REACTION!","cyan");actionUsed=true;clearSelection(false);closeChoice();render()})}
+function showCandidates(title,cands,cb){document.getElementById("choiceTitle").textContent=title;document.getElementById("choiceBody").innerHTML=cands.map(n=>`<div class="choice"><b>${n}</b> ${defs[n].formula} / ${defs[n].score}点<br><button onclick="chooseCandidate('${n}')">これを作る</button></div>`).join("");window._chooseCandidate=cb;document.getElementById("choiceModal").style.display="flex"}
+function chooseCandidate(n){window._chooseCandidate&&window._chooseCandidate(n)}
+
+function playSelectedAtom(){
+ if(!requireAction())return;
+ if(selectedHand.size!==1){log("単体として出すカードを手札から1枚だけ選んでください。");return}
+ const i=[...selectedHand][0],c=player.hand[i],d=defs[c];
+ if(!d){log("不明なカードです。");return}
+ if(d.type==="event"){log("火・電気・石灰水は専用ボタンで使います。");return}
+ if(["水素","酸素","窒素","塩素"].includes(c)){log(c+"は分子にして物質として出してください。");return}
+ player.hand.splice(i,1);
+ if(c==="炭素") addStack(player,"Cスタック","あなた");
+ else if(c==="硫黄") addStack(player,"Sスタック","あなた");
+ else addField(player,c,"あなた");
+ log("あなたは"+c+"を場に出した。");sound("tap");big("SET","cyan");clearSelection(false);actionUsed=true;render()
+}
+function addStack(l,stackName,owner){let s=l.field.find(c=>c.name===stackName);if(s){s.count++;log(owner+"の"+(stackName==="Cスタック"?"炭素":"硫黄")+"が"+s.count+"個になった。")}else addField(l,stackName,owner,1)}
+function addField(l,name,owner,count=1){if(l.field.length>=6){log(owner+"の研究室が満杯。"+name+"は捨て札へ。");return}l.field.push(makeCard(name,count));afterEnter(l,name,owner)}
+function afterEnter(l,name,owner){
+ if(name==="硫酸"){l.life--;log(owner+"は硫酸の危険性でライフ-1。");sound("boom");big("DANGER","red",true)}
+ if(name==="硫化水素"){player.life--;cpu.life--;log("硫化水素発生。両プレイヤーはライフ-1。");sound("boom");big("TOXIC GAS!","red",true)}
+ if(name==="水"&&l.field.some(c=>c.name==="ナトリウム")){const idx=l.field.findIndex(c=>c.name==="ナトリウム");l.field.splice(idx,1);l.life--;log(owner+"のナトリウムが水と反応！ライフ-1。");sound("boom");big("BOOM!","red",true)}
+ if(name==="アンモニア"){let before=l.field.length;l.field=l.field.filter(c=>c.name!=="水");if(before-l.field.length>0)log(owner+"の水がアンモニアにより捨てられた。")}
+}
+
+function sendReaction(){
+ if(!requireAction())return;
+ const items=selectedAllForSend();
+ if(selectedCpuField.size>0){
+   if(!items.length){log("素材を選択してください。");return}
+   if(items.some(it=>defs[it.name].type==="event")){log("火・電気・石灰水は専用ボタンで使ってください。");return}
+   const names=items.map(x=>x.name);
+   if(isNeutralization(names)){removeItems(items);cpu.life--;addField(player,"水","あなた");addField(cpu,"水","CPU");log("中和発生！受けたCPUはライフ-1。両者の場に水が残った。");sound("boom");big("NEUTRALIZE!","yellow",true);actionUsed=true;clearSelection(false);render();return}
+   const bag=bagOf(items),cands=candidateNames(bag);
+   if(!cands.length){log("その組み合わせでは相手の場で物質を作れません。");return}
+   showCandidates("相手の場で作る物質",cands,(name)=>{removeItems(items);addField(cpu,name,"CPU");if(name==="エタノール"){cpu.skipDraw=true;log("エタノール効果：CPUは次のターンドローできない。");sound("skip");big("SKIP DRAW!","yellow")}log("相手の研究室で反応！ CPUの場に"+name+"を生成。余った原子は捨て札へ。");sound("reaction");big("SEND REACTION!","yellow");actionUsed=true;clearSelection(false);closeChoice();render()});return;
+ }
+ if(selectedPlayerField.size!==1){log("自分の場の物質を1つ選ぶか、相手の場＋自分の素材を選んでください。");return}
+ const i=[...selectedPlayerField][0],card=player.field[i],name=card.name;
+ if(defs[name].type==="atom"||defs[name].type==="stack"){log("そのまま送れるのは物質カードのみ。");return}
+ player.field.splice(i,1);addField(cpu,name,"CPU",card.count||1);
+ if(name==="エタノール"){cpu.skipDraw=true;log("エタノール効果：CPUは次のターンドローできない。");sound("skip");big("SKIP DRAW!","yellow")}
+ log("あなたは"+name+"をCPU研究室へ送った。");sound("tap");big("SEND","yellow");clearSelection(false);actionUsed=true;render()
+}
+function canFormFromNames(names,need){const bag={};names.forEach(n=>addBag(bag,defs[n]?.atoms||{}));return hasNeed(bag,need)}
+function isNeutralization(names){const hasAcid=names.includes("塩酸")||names.includes("硫酸");const hasBase=names.includes("水酸化ナトリウム");const canMakeBase=canFormFromNames(names,defs["水酸化ナトリウム"].atoms);const canMakeHCl=canFormFromNames(names,defs["塩酸"].atoms);const canMakeH2SO4=canFormFromNames(names,defs["硫酸"].atoms);return (hasAcid&&(hasBase||canMakeBase))||(hasBase&&(hasAcid||canMakeHCl||canMakeH2SO4))}
+
+function useIron(){if(!requireAction())return;let idx=-1;if(selectedPlayerField.size===1){const i=[...selectedPlayerField][0];if(player.field[i].name==="鉄")idx=i}if(idx<0)idx=player.field.findIndex(c=>c.name==="鉄");if(idx<0){log("自分の場に鉄がありません。");return}if(player.life>=3){log("ライフはすでに最大です。鉄は温存できます。");return}player.field.splice(idx,1);player.life++;log("場の鉄を使って研究室を補強。ライフ+1。鉄は捨て札へ。");sound("reaction");big("REPAIR!","cyan");clearSelection(false);actionUsed=true;render()}
+function useLimewater(){if(!requireAction())return;let idx=-1;if(selectedHand.size===1){const h=[...selectedHand][0];if(player.hand[h]==="石灰水")idx=h}if(idx<0)idx=player.hand.indexOf("石灰水");if(idx<0){log("手札に石灰水がありません。");return}const co2=cpu.field.findIndex(c=>c.name==="二酸化炭素");if(co2<0){log("相手の場に二酸化炭素がありません。");return}player.hand.splice(idx,1);cpu.field.splice(co2,1);log("石灰水を使い、相手の二酸化炭素を検出して捨てた。");sound("reaction");big("LIMEWATER!","cyan");clearSelection(false);actionUsed=true;render()}
+function useReduction(){if(!requireAction())return;const selectedOwn=[...selectedHand].map(i=>({zone:"hand",i,name:player.hand[i]})).concat([...selectedPlayerField].map(i=>({zone:"field",i,name:player.field[i].name})));const selectedEnemy=[...selectedCpuField].map(i=>({zone:"enemy",i,name:cpu.field[i].name}));const carbon=selectedOwn.find(x=>x.name==="炭素"||x.name==="Cスタック");const fire=selectedOwn.find(x=>x.name==="火");const oxide=selectedEnemy.find(x=>["酸化鉄(III)","酸化鉄(II,III)","酸化鉄(II)"].includes(x.name));if(!carbon||!fire||!oxide){log("還元には、自分の炭素・火、相手の酸化鉄を選択してください。");return}const next=oxide.name==="酸化鉄(III)"?"酸化鉄(II,III)":oxide.name==="酸化鉄(II,III)"?"酸化鉄(II)":"鉄";consumeOwnCard(carbon);consumeOwnCard(fire);cpu.field[oxide.i]=makeCard(next);log("炭素と火で相手の"+oxide.name+"を還元し、"+next+"へ退化させた。");sound("reaction");big("REDUCTION!","yellow");clearSelection(false);actionUsed=true;render()}
+function consumeOwnCard(item){if(item.zone==="hand")player.hand.splice(item.i,1);else if(item.zone==="field"){if(player.field[item.i].name==="Cスタック"&&player.field[item.i].count>1)player.field[item.i].count--;else player.field.splice(item.i,1)}}
+
+function convertStack(){if(!requireAction())return;if(selectedPlayerField.size!==1){log("変換するCまたはSスタックを1つ選んでください。");return}const i=[...selectedPlayerField][0],card=player.field[i];if(card.name==="Cスタック"&&card.count>=8){player.field.splice(i,1);addField(player,"ダイヤモンド","あなた");log("8Cをダイヤモンドに変換した。");sound("rare");big("DIAMOND!","yellow");actionUsed=true;clearSelection(false);render();return}if(card.name==="Sスタック"&&card.count>=8){player.field.splice(i,1);addField(player,"硫黄ゴム","あなた");log("8Sを硫黄ゴム S8 に変換した。");sound("rare");big("S8 COUNTER!","yellow");actionUsed=true;clearSelection(false);render();return}log("変換には8Cまたは8Sが必要です。")}
+
+function openFire(){if(!requireAction())return;if(player.hand.indexOf("火")<0){log("手札に火がありません。");return}const targets=cpu.field.map((c,i)=>({x:c.name,i})).filter(o=>["水素分子","酸素分子","酸素","ナトリウム","マグネシウム","水","炭酸水素ナトリウム","ダイヤモンド"].includes(o.x));showTargets("火を使う対象",targets,"fireTarget")}
+function openElectric(){if(!requireAction())return;if(player.hand.indexOf("電気")<0){log("手札に電気がありません。");return}const targets=cpu.field.map((c,i)=>({x:c.name,i})).filter(o=>["水","塩化ナトリウム","塩酸"].includes(o.x));showTargets("電気を使う対象",targets,"electricTarget")}
+function showTargets(title,targets,fn){document.getElementById("choiceTitle").textContent=title;document.getElementById("choiceBody").innerHTML=targets.length?targets.map(o=>`<div class="choice">${o.x}<br><button onclick="${fn}(${o.i})">使う</button></div>`).join(""):"<p>相手の場に対象がありません。</p>";document.getElementById("choiceModal").style.display="flex"}
+function tryS8Counter(defender,attackerName){const idx=defender.field.findIndex(c=>c.name==="硫黄ゴム");if(idx>=0){defender.field.splice(idx,1);if(attackerName==="player")player.life--;else cpu.life--;log("硫黄ゴム S8 が燃焼をカウンター。攻撃側ライフ-1。S8は捨て札へ。");sound("boom");big("COUNTER!","yellow",true);return true}return false}
+function fireTarget(i){player.hand.splice(player.hand.indexOf("火"),1);const name=cpu.field[i].name;if(tryS8Counter(cpu,"player")){actionUsed=true;closeChoice();clearSelection(false);render();return}resolveFire(cpu,i,"CPU");actionUsed=true;closeChoice();clearSelection(false);render()}
+function resolveFire(targetLab,i,owner){const name=targetLab.field[i]?.name;if(!name)return;const hasCO2=targetLab.field.findIndex(c=>c.name==="二酸化炭素");const hasWater=targetLab.field.findIndex(c=>c.name==="水");if(["水素分子","酸素分子","酸素"].includes(name)){if(hasCO2>=0){targetLab.field.splice(hasCO2,1);log(owner+"は二酸化炭素で燃焼を無効化。");sound("skip");big("BLOCK!","cyan");return}if(hasWater>=0){targetLab.field.splice(hasWater,1);log(owner+"は水で燃焼を無効化。");sound("skip");big("WATER BLOCK!","cyan");return}}if(["ナトリウム","マグネシウム"].includes(name)&&hasCO2>=0&&hasWater>=0){targetLab.field.splice(Math.max(hasCO2,hasWater),1);targetLab.field.splice(Math.min(hasCO2,hasWater),1);const ti=targetLab.field.findIndex(c=>c.name===name);if(ti>=0)targetLab.field.splice(ti,1);targetLab.life-=2;log(owner+"の"+name+"が二酸化炭素・水と激しく反応。ライフ-2。");sound("boom");big("SUPER BOOM!","red",true);return}if(name==="水"){targetLab.field.splice(i,1);log(owner+"の水が蒸発。");sound("boom");big("EVAPORATE!","yellow",true);return}if(name==="炭酸水素ナトリウム"){targetLab.field.splice(i,1);addField(targetLab,"水",owner);addField(targetLab,"二酸化炭素",owner);addField(targetLab,"炭酸ナトリウム",owner);log("炭酸水素ナトリウムが熱分解。");sound("reaction");big("THERMAL!","yellow",true);return}if(name==="ダイヤモンド"){targetLab.field.splice(i,1);log(owner+"のダイヤモンドが砕けて捨て札へ。");sound("boom");big("CRASH!","red",true);return}targetLab.field.splice(i,1);targetLab.life--;log(owner+"の"+name+"が燃焼。ライフ-1。");sound("boom");big("BOOM!","red",true)}
+function electricTarget(i){player.hand.splice(player.hand.indexOf("電気"),1);const name=cpu.field[i].name;cpu.field.splice(i,1);addField(cpu,"水素分子","CPU");addField(cpu,name==="塩酸"?"塩素分子":"酸素分子","CPU");log("電気でCPUの"+name+"を分解した。");sound("reaction");big("ELECTROLYSIS!","cyan");actionUsed=true;closeChoice();clearSelection(false);render()}
+
+function endPlayerTurn(){if(phase!=="player")return;if(!hasDrawn){log("ドローしてからターン終了してください。");return}if(player.life<=0||cpu.life<=0||turn>maxTurns){endGame();return}phase="cpu";render();setTimeout(()=>{try{cpuTurn()}catch(e){log("CPU処理エラー: "+e.message);turn++;phase="player";hasDrawn=false;actionUsed=false;clearSelection(false);log("あなたのターン。まずドロー。");render()}},650)}
+function cpuTurn(){log("CPUターン。");if(cpu.skipDraw){cpu.skipDraw=false;log("エタノール効果でCPUはドローできない。");sound("skip");big("CPU SKIP","yellow")}else{draw(cpu,1);log("CPUがドロー。");sound("draw")}let acted=false;
+ const cands=cpuCandidates();if(cands.length&&cpu.field.length<6){const choice=cands[0];consumeCpuFor(choice);addField(cpu,choice,"CPU");log("CPUは"+choice+"を作った。");sound("reaction");big("CPU REACTION","cyan");acted=true}
+ if(!acted&&cpu.hand.includes("火")){const targets=player.field.map((c,i)=>({x:c.name,i})).filter(o=>["水素分子","酸素分子","酸素","ナトリウム","マグネシウム","水","炭酸水素ナトリウム","ダイヤモンド"].includes(o.x));if(targets.length){cpu.hand.splice(cpu.hand.indexOf("火"),1);if(!tryS8Counter(player,"cpu"))resolveFire(player,targets[0].i,"あなた");acted=true}}
+ if(!acted&&cpu.hand.includes("電気")){const i=player.field.findIndex(c=>["水","塩化ナトリウム","塩酸"].includes(c.name));if(i>=0){cpu.hand.splice(cpu.hand.indexOf("電気"),1);const nm=player.field[i].name;player.field.splice(i,1);addField(player,"水素分子","あなた");addField(player,nm==="塩酸"?"塩素分子":"酸素分子","あなた");log("CPUが電気であなたの"+nm+"を分解。");sound("reaction");big("ELECTROLYSIS!","cyan");acted=true}}
+ if(!acted&&cpu.hand.length&&cpu.field.length<6){let idx=cpu.hand.findIndex(c=>defs[c]&&defs[c].type==="atom"&&!["水素","酸素","窒素","塩素"].includes(c));if(idx>=0){const c=cpu.hand.splice(idx,1)[0];if(c==="炭素")addStack(cpu,"Cスタック","CPU");else if(c==="硫黄")addStack(cpu,"Sスタック","CPU");else addField(cpu,c,"CPU");log("CPUは"+c+"を場に出した。");sound("tap");acted=true}else log("CPUは行動できなかった。")}
+ if(player.life<=0||cpu.life<=0||turn>=maxTurns){render();endGame();return}turn++;phase="player";hasDrawn=false;actionUsed=false;clearSelection(false);log("あなたのターン。まずドロー。");render()}
+function cpuCandidates(){const bag={};cpu.hand.forEach(c=>{if(defs[c])addBag(bag,defs[c].atoms||{})});return candidateNames(bag)}
+function consumeCpuFor(name){let need={...(defs[name]?.atoms||{})};for(let i=cpu.hand.length-1;i>=0;i--){const card=cpu.hand[i],atoms=defs[card]?.atoms||{};let useful=false;for(const k of Object.keys(atoms)){if((need[k]||0)>0)useful=true}if(useful){for(const[k,v]of Object.entries(atoms))need[k]=Math.max(0,(need[k]||0)-v);cpu.hand.splice(i,1)}if(Object.values(need).every(v=>v<=0))break}}
+
+function endGame(){const ps=score(player),cs=score(cpu);let title=ps>cs?"あなたの勝利":ps<cs?"CPUの勝利":"引き分け";if(player.life<=0&&cpu.life>0)title="CPUの勝利";if(cpu.life<=0&&player.life>0)title="あなたの勝利";document.getElementById("resultTitle").textContent=title;document.getElementById("resultText").innerHTML=`あなた：${ps}点 / ライフ${player.life}<br>CPU：${cs}点 / ライフ${cpu.life}<br><br>得点は場の物質のみ。`;document.getElementById("resultModal").style.display="flex";if(title==="あなたの勝利"){sound("win");big("WIN!","yellow")}else if(title==="CPUの勝利"){sound("lose");big("LOSE","red",true)}else{sound("reaction");big("DRAW GAME","cyan")}}
+
+function render(){document.getElementById("turn").textContent=turn+"/"+maxTurns;document.getElementById("phase").textContent=phase==="player"?"あなた":"CPU";document.getElementById("action").textContent=actionUsed?"使用済み":"未使用";document.getElementById("deckCount").textContent=player?player.deck.length:0;document.getElementById("pLife").textContent=player?hearts(player.life):"♥♥♥";document.getElementById("cLife").textContent=cpu?hearts(cpu.life):"♥♥♥";document.getElementById("pScore").textContent=player?score(player)+"点":"0点";document.getElementById("cScore").textContent=cpu?score(cpu)+"点":"0点";document.getElementById("handInfo").textContent=player?player.hand.length+"枚":"0枚";renderField("playerField",player,"player");renderField("cpuField",cpu,"cpu");document.getElementById("hand").innerHTML=player?player.hand.map((c,i)=>cardHTML({name:c,count:1},`onclick="toggleHand(${i})"`,selectedHand.has(i))).join(""):"";document.getElementById("drawBtn").disabled=phase!=="player"||hasDrawn;["makeBtn","playBtn","sendBtn","ironBtn","limeBtn","reductionBtn","convertBtn","fireBtn","elecBtn"].forEach(id=>document.getElementById(id).disabled=phase!=="player"||!hasDrawn||actionUsed);document.getElementById("endBtn").disabled=phase!=="player"||!hasDrawn}
+function renderField(id,l,who){if(!l){document.getElementById(id).innerHTML="";return}let html="";for(let i=0;i<6;i++){if(l.field[i]){const sel=who==="player"?selectedPlayerField.has(i):selectedCpuField.has(i);html+=cardHTML(l.field[i],`onclick="toggleField('${who}',${i})"`,sel)}else html+=`<div class="card empty"><div>EMPTY</div></div>`}document.getElementById(id).innerHTML=html}
+function cardHTML(card,extra="",sel=false){const d=defs[card.name]||{};const nm=label(card);const f=formula(card);const sc=cardScore(card);return `<div class="card ${sel?'selected':''}" ${extra}><div class="name ${d.type==='stack'?'stack':''}">${nm}</div><div class="formula">${f}</div><div><div class="kind">${d.type||''}</div><div class="pts">${sc}点</div></div></div>`}
+</script>
+</body>
+</html>
