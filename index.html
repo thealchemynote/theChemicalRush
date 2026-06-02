@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chemical Rush v2.2</title>
+<title>Chemical Rush v2.3</title>
 <style>
 :root{
   --bg:#071014;--panel:#101b24;--line:#2d4b60;--cyan:#78f6ff;--green:#5cffaa;
@@ -66,7 +66,7 @@ body.shake{animation:shake .35s linear}
 
 <div class="modal" id="startModal"><div class="box">
 <h1>CHEMICAL RUSH</h1>
-<p>v2.2：純水の電気分解を削除し、NaOH/NaCl/HClの電気分解に整理した安定版</p>
+<p>v2.3：純水の電気分解を削除し、硫化水素特殊反応を追加した安定版</p>
 <div class="rules">
 <div class="rule"><b>初期手札7枚</b><br>毎ターン1枚ドロー</div>
 <div class="rule"><b>1ターン1行動</b><br>作る・送る・使う</div>
@@ -86,7 +86,7 @@ body.shake{animation:shake .35s linear}
 
 <div class="app">
 <header>
-<div><h1>CHEMICAL RUSH</h1><div class="sub">Card Battle v2.2</div></div>
+<div><h1>CHEMICAL RUSH</h1><div class="sub">Card Battle v2.3</div></div>
 <div class="stats">
 <div class="stat"><small>TURN</small><b id="turn">0/10</b></div>
 <div class="stat"><small>PHASE</small><b id="phase">待機</b></div>
@@ -121,6 +121,7 @@ body.shake{animation:shake .35s linear}
 <button class="good" id="ironBtn" onclick="useIron()">鉄を使う</button>
 <button class="good" id="limeBtn" onclick="useLimewater()">石灰水</button>
 <button class="purple" id="reductionBtn" onclick="useReduction()">還元</button>
+<button class="danger" id="h2sBtn" onclick="useHydrogenSulfide()">硫化水素</button>
 <button class="purple" id="convertBtn" onclick="convertStack()">変換</button>
 <button class="danger" id="fireBtn" onclick="openFire()">火を使う</button>
 <button id="elecBtn" onclick="openElectric()">電気を使う</button>
@@ -128,7 +129,7 @@ body.shake{animation:shake .35s linear}
 </div>
 <button id="endBtn" onclick="endPlayerTurn()">ターン終了</button>
 <div class="rule"><b>作る</b><br>手札＋自分の場の素材を選択。候補から物質生成。余った原子は捨て札。</div>
-<div class="rule"><b>送る</b><br>相手の場＋自分の素材を選ぶと、相手の場で反応生成。中和なら受けた側ライフ-1。</div>
+<div class="rule"><b>送る</b><br>相手の場＋自分の素材を選ぶと、相手の場で反応生成。HCl＋FeSは「硫化水素」ボタンで両者ライフ-1。</div>
 <div class="log" id="log"></div>
 </aside>
 </main>
@@ -281,6 +282,38 @@ function sendReaction(){
 function canFormFromNames(names,need){const bag={};names.forEach(n=>addBag(bag,defs[n]?.atoms||{}));return hasNeed(bag,need)}
 function isNeutralization(names){const hasAcid=names.includes("塩酸")||names.includes("硫酸");const hasBase=names.includes("水酸化ナトリウム");const canMakeBase=canFormFromNames(names,defs["水酸化ナトリウム"].atoms);const canMakeHCl=canFormFromNames(names,defs["塩酸"].atoms);const canMakeH2SO4=canFormFromNames(names,defs["硫酸"].atoms);return (hasAcid&&(hasBase||canMakeBase))||(hasBase&&(hasAcid||canMakeHCl||canMakeH2SO4))}
 
+
+function useHydrogenSulfide(){
+ if(!requireAction())return;
+
+ if(selectedPlayerField.size!==1 || selectedCpuField.size!==1){
+   log("硫化水素には、自分の場から1枚、相手の場から1枚を選択してください。");
+   return;
+ }
+
+ const pi=[...selectedPlayerField][0];
+ const ci=[...selectedCpuField][0];
+ const pName=player.field[pi]?.name;
+ const cName=cpu.field[ci]?.name;
+
+ const valid =
+   (pName==="塩酸" && cName==="硫化鉄") ||
+   (pName==="硫化鉄" && cName==="塩酸");
+
+ if(!valid){
+   log("硫化水素は、塩酸 HCl と硫化鉄 FeS の組み合わせで発生します。");
+   return;
+ }
+
+ player.field.splice(pi,1);
+ cpu.field.splice(ci,1);
+ player.life--;
+ cpu.life--;
+ log("硫化水素 H₂S 発生！ HClとFeSは捨て札へ。両プレイヤーはライフ-1。");
+ sound("boom"); big("H₂S GAS!","red",true);
+ clearSelection(false); actionUsed=true; render();
+}
+
 function useIron(){if(!requireAction())return;let idx=-1;if(selectedPlayerField.size===1){const i=[...selectedPlayerField][0];if(player.field[i].name==="鉄")idx=i}if(idx<0)idx=player.field.findIndex(c=>c.name==="鉄");if(idx<0){log("自分の場に鉄がありません。");return}if(player.life>=3){log("ライフはすでに最大です。鉄は温存できます。");return}player.field.splice(idx,1);player.life++;log("場の鉄を使って研究室を補強。ライフ+1。鉄は捨て札へ。");sound("reaction");big("REPAIR!","cyan");clearSelection(false);actionUsed=true;render()}
 function useLimewater(){if(!requireAction())return;let idx=-1;if(selectedHand.size===1){const h=[...selectedHand][0];if(player.hand[h]==="石灰水")idx=h}if(idx<0)idx=player.hand.indexOf("石灰水");if(idx<0){log("手札に石灰水がありません。");return}const co2=cpu.field.findIndex(c=>c.name==="二酸化炭素");if(co2<0){log("相手の場に二酸化炭素がありません。");return}player.hand.splice(idx,1);cpu.field.splice(co2,1);log("石灰水を使い、相手の二酸化炭素を検出して捨てた。");sound("reaction");big("LIMEWATER!","cyan");clearSelection(false);actionUsed=true;render()}
 function useReduction(){if(!requireAction())return;const selectedOwn=[...selectedHand].map(i=>({zone:"hand",i,name:player.hand[i]})).concat([...selectedPlayerField].map(i=>({zone:"field",i,name:player.field[i].name})));const selectedEnemy=[...selectedCpuField].map(i=>({zone:"enemy",i,name:cpu.field[i].name}));const carbon=selectedOwn.find(x=>x.name==="炭素"||x.name==="Cスタック");const fire=selectedOwn.find(x=>x.name==="火");const oxide=selectedEnemy.find(x=>["酸化鉄(III)","酸化鉄(II,III)","酸化鉄(II)"].includes(x.name));if(!carbon||!fire||!oxide){log("還元には、自分の炭素・火、相手の酸化鉄を選択してください。");return}const next=oxide.name==="酸化鉄(III)"?"酸化鉄(II,III)":oxide.name==="酸化鉄(II,III)"?"酸化鉄(II)":"鉄";consumeOwnCard(carbon);consumeOwnCard(fire);cpu.field[oxide.i]=makeCard(next);log("炭素と火で相手の"+oxide.name+"を還元し、"+next+"へ退化させた。");sound("reaction");big("REDUCTION!","yellow");clearSelection(false);actionUsed=true;render()}
@@ -308,7 +341,7 @@ function consumeCpuFor(name){let need={...(defs[name]?.atoms||{})};for(let i=cpu
 
 function endGame(){const ps=score(player),cs=score(cpu);let title=ps>cs?"あなたの勝利":ps<cs?"CPUの勝利":"引き分け";if(player.life<=0&&cpu.life>0)title="CPUの勝利";if(cpu.life<=0&&player.life>0)title="あなたの勝利";document.getElementById("resultTitle").textContent=title;document.getElementById("resultText").innerHTML=`あなた：${ps}点 / ライフ${player.life}<br>CPU：${cs}点 / ライフ${cpu.life}<br><br>得点は場の物質のみ。`;document.getElementById("resultModal").style.display="flex";if(title==="あなたの勝利"){sound("win");big("WIN!","yellow")}else if(title==="CPUの勝利"){sound("lose");big("LOSE","red",true)}else{sound("reaction");big("DRAW GAME","cyan")}}
 
-function render(){document.getElementById("turn").textContent=turn+"/"+maxTurns;document.getElementById("phase").textContent=phase==="player"?"あなた":"CPU";document.getElementById("action").textContent=actionUsed?"使用済み":"未使用";document.getElementById("deckCount").textContent=player?player.deck.length:0;document.getElementById("pLife").textContent=player?hearts(player.life):"♥♥♥";document.getElementById("cLife").textContent=cpu?hearts(cpu.life):"♥♥♥";document.getElementById("pScore").textContent=player?score(player)+"点":"0点";document.getElementById("cScore").textContent=cpu?score(cpu)+"点":"0点";document.getElementById("handInfo").textContent=player?player.hand.length+"枚":"0枚";renderField("playerField",player,"player");renderField("cpuField",cpu,"cpu");document.getElementById("hand").innerHTML=player?player.hand.map((c,i)=>cardHTML({name:c,count:1},`onclick="toggleHand(${i})"`,selectedHand.has(i))).join(""):"";document.getElementById("drawBtn").disabled=phase!=="player"||hasDrawn;["makeBtn","playBtn","sendBtn","ironBtn","limeBtn","reductionBtn","convertBtn","fireBtn","elecBtn"].forEach(id=>document.getElementById(id).disabled=phase!=="player"||!hasDrawn||actionUsed);document.getElementById("endBtn").disabled=phase!=="player"||!hasDrawn}
+function render(){document.getElementById("turn").textContent=turn+"/"+maxTurns;document.getElementById("phase").textContent=phase==="player"?"あなた":"CPU";document.getElementById("action").textContent=actionUsed?"使用済み":"未使用";document.getElementById("deckCount").textContent=player?player.deck.length:0;document.getElementById("pLife").textContent=player?hearts(player.life):"♥♥♥";document.getElementById("cLife").textContent=cpu?hearts(cpu.life):"♥♥♥";document.getElementById("pScore").textContent=player?score(player)+"点":"0点";document.getElementById("cScore").textContent=cpu?score(cpu)+"点":"0点";document.getElementById("handInfo").textContent=player?player.hand.length+"枚":"0枚";renderField("playerField",player,"player");renderField("cpuField",cpu,"cpu");document.getElementById("hand").innerHTML=player?player.hand.map((c,i)=>cardHTML({name:c,count:1},`onclick="toggleHand(${i})"`,selectedHand.has(i))).join(""):"";document.getElementById("drawBtn").disabled=phase!=="player"||hasDrawn;["makeBtn","playBtn","sendBtn","ironBtn","limeBtn","reductionBtn","h2sBtn","convertBtn","fireBtn","elecBtn"].forEach(id=>document.getElementById(id).disabled=phase!=="player"||!hasDrawn||actionUsed);document.getElementById("endBtn").disabled=phase!=="player"||!hasDrawn}
 function renderField(id,l,who){if(!l){document.getElementById(id).innerHTML="";return}let html="";for(let i=0;i<6;i++){if(l.field[i]){const sel=who==="player"?selectedPlayerField.has(i):selectedCpuField.has(i);html+=cardHTML(l.field[i],`onclick="toggleField('${who}',${i})"`,sel)}else html+=`<div class="card empty"><div>EMPTY</div></div>`}document.getElementById(id).innerHTML=html}
 function cardHTML(card,extra="",sel=false){const d=defs[card.name]||{};const nm=label(card);const f=formula(card);const sc=cardScore(card);return `<div class="card ${sel?'selected':''}" ${extra}><div class="name ${d.type==='stack'?'stack':''}">${nm}</div><div class="formula">${f}</div><div><div class="kind">${d.type||''}</div><div class="pts">${sc}点</div></div></div>`}
 </script>
